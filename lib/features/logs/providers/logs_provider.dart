@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/time_log.dart';
 
-// 1. The Notifier: This manages the actual list of ALL logs (past and present).
+// 1. The Notifier: Manages the raw list of ALL logs (past and present).
 class LogsNotifier extends Notifier<List<TimeLog>> {
   @override
   List<TimeLog> build() {
+    // This is your actual May 2026 data!
     return [
       // --- SUNDAY (May 24) - History ---
       TimeLog(
@@ -75,10 +76,10 @@ final currentWeekProvider = Provider<Map<String, Map<String, List<TimeLog>>>>((r
   final int daysToSubtract = now.weekday % 7;
   final currentSunday = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysToSubtract));
 
-  // 1. FILTER: Only keep logs that belong to this week
+  // FILTER: Only keep logs that belong to this week
   final thisWeeksLogs = allLogs.where((log) => log.weekStartDate == currentSunday).toList();
 
-  // 2. REORDER: Set up the template starting from Sunday instead of Monday
+  // REORDER: Set up the template starting from Sunday instead of Monday
   Map<String, Map<String, List<TimeLog>>> grouped = {
     'Sunday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Monday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
@@ -89,7 +90,7 @@ final currentWeekProvider = Provider<Map<String, Map<String, List<TimeLog>>>>((r
     'Saturday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
   };
 
-  // 3. DROP IN DATA
+  // DROP IN DATA
   for (final log in thisWeeksLogs) {
     final day = log.dayOfWeek;
     final time = log.timeOfDay;
@@ -100,4 +101,31 @@ final currentWeekProvider = Provider<Map<String, Map<String, List<TimeLog>>>>((r
   }
 
   return grouped;
+});
+
+// 4. The "History" Provider: Groups all past logs by their starting Sunday
+final historyProvider = Provider<Map<DateTime, List<TimeLog>>>((ref) {
+  final allLogs = ref.watch(logsProvider);
+  
+  // Find out what the date was for THIS week's Sunday at midnight
+  final now = DateTime.now();
+  final int daysToSubtract = now.weekday % 7;
+  final currentSunday = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysToSubtract));
+
+  // FILTER: Only keep logs that happened strictly BEFORE this current Sunday
+  final pastLogs = allLogs.where((log) => log.weekStartDate.isBefore(currentSunday)).toList();
+
+  // SORT: Put the newest past weeks at the top of the list
+  pastLogs.sort((a, b) => b.startTime.compareTo(a.startTime));
+
+  // GROUP: Bundle them up by their week start date
+  Map<DateTime, List<TimeLog>> groupedHistory = {};
+  for (var log in pastLogs) {
+    if (!groupedHistory.containsKey(log.weekStartDate)) {
+      groupedHistory[log.weekStartDate] = [];
+    }
+    groupedHistory[log.weekStartDate]!.add(log);
+  }
+
+  return groupedHistory;
 });
