@@ -2,7 +2,7 @@ import 'package:intl/intl.dart';
 
 class TimeLog {
   final String id;
-  final String activityName; 
+  final String activityName;
   final DateTime startTime;
   final DateTime endTime;
 
@@ -13,11 +13,10 @@ class TimeLog {
     required this.endTime,
   });
 
-  // 1. The Math: Calculates the exact time spent automatically
+  // 1. Calculates the exact time spent automatically
   Duration get duration => endTime.difference(startTime);
 
-  // 2. The Formatter: Converts the duration into a clean, readable string 
-  // e.g., if you log 69 minutes of Real Analysis, it outputs "1h 9m"
+  // 2. Converts the duration into a clean, readable string
   String get formattedDuration {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -42,17 +41,20 @@ class TimeLog {
     }
   }
 
-  // 4. The Day Grouper: Helper to get the name of the day for your Weekly View
-  // e.g., Returns "Monday" so your UI knows exactly which card to drop this into
+  // 4. Helper to get the name of the day (e.g., "Monday")
   String get dayOfWeek {
     return DateFormat('EEEE').format(startTime); 
   }
 
-  // 5. The Week Identifier: Helper to group logs by the exact week of the year
-  // This ensures logs from this week don't mix with logs from last week
-  int get weekOfYear {
-    // A simple calculation to find the week number
-    int dayOfYear = int.parse(DateFormat('D').format(startTime));
-    return ((dayOfYear - startTime.weekday + 10) / 7).floor();
+  // 5. The Week Identifier (Sunday Start)
+  // Calculates the exact date of the Sunday that started this log's week
+  DateTime get weekStartDate {
+    // Dart's weekday: Monday=1 ... Sunday=7
+    // Using modulo 7 turns Sunday into 0, Monday into 1, Tuesday into 2...
+    int daysToSubtract = startTime.weekday % 7;
+    
+    // Subtract those days to find the Sunday of that week at midnight
+    return DateTime(startTime.year, startTime.month, startTime.day)
+        .subtract(Duration(days: daysToSubtract));
   }
 }

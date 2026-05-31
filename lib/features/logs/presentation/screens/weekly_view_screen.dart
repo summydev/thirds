@@ -11,7 +11,7 @@ class WeeklyViewScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 1. Listen to the smartly grouped data map
-    final weeklyLogs = ref.watch(weeklyGroupedLogsProvider);
+    final weeklyLogs = ref.watch(currentWeekProvider);
 
     return Scaffold(
       backgroundColor: Colors.grey[100],

@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/time_log.dart';
 
-// 1. The Notifier: This manages the actual list of logs and how to change them.
+// 1. The Notifier: This manages the actual list of ALL logs (past and present).
 class LogsNotifier extends Notifier<List<TimeLog>> {
   @override
   List<TimeLog> build() {
     return [
-      // --- SUNDAY (May 24) ---
+      // --- SUNDAY (May 24) - History ---
       TimeLog(
         id: 'sun_1',
         activityName: 'Real Analysis',
@@ -16,17 +16,17 @@ class LogsNotifier extends Notifier<List<TimeLog>> {
       TimeLog(
         id: 'sun_2',
         activityName: 'Real Analysis',
-        startTime: DateTime(2026, 5, 24, 15, 21), // 3:21 PM
-        endTime: DateTime(2026, 5, 24, 16, 15), // 4:15 PM
+        startTime: DateTime(2026, 5, 24, 15, 21), 
+        endTime: DateTime(2026, 5, 24, 16, 15), 
       ),
       TimeLog(
         id: 'sun_3',
         activityName: 'Real Analysis',
-        startTime: DateTime(2026, 5, 24, 17, 50), // 5:50 PM - App will auto-sort to EVENING
-        endTime: DateTime(2026, 5, 24, 18, 50), // 6:50 PM
+        startTime: DateTime(2026, 5, 24, 17, 50), 
+        endTime: DateTime(2026, 5, 24, 18, 50), 
       ),
 
-      // --- MONDAY (May 25) ---
+      // --- MONDAY (May 25) - History ---
       TimeLog(
         id: 'mon_1',
         activityName: 'Real Analysis',
@@ -34,63 +34,66 @@ class LogsNotifier extends Notifier<List<TimeLog>> {
         endTime: DateTime(2026, 5, 25, 7, 20),
       ),
 
-      // --- THURSDAY (May 28) ---
+      // --- THURSDAY (May 28) - History ---
       TimeLog(
         id: 'thu_1',
         activityName: 'Real Analysis',
-        startTime: DateTime(2026, 5, 28, 15, 20), // 3:20 PM
-        endTime: DateTime(2026, 5, 28, 16, 00), // 4:00 PM
+        startTime: DateTime(2026, 5, 28, 15, 20), 
+        endTime: DateTime(2026, 5, 28, 16, 00), 
       ),
 
-      // --- SATURDAY (May 30 - Today!) ---
+      // --- SATURDAY (May 30) - History ---
       TimeLog(
         id: 'sat_1',
-        activityName: 'Reading', // Update this if it was also Real Analysis!
-        startTime: DateTime(2026, 5, 30, 18, 11), // 6:11 PM
-        endTime: DateTime(2026, 5, 30, 18, 30), // 6:30 PM
+        activityName: 'Reading', 
+        startTime: DateTime(2026, 5, 30, 18, 11), 
+        endTime: DateTime(2026, 5, 30, 18, 30), 
       ),
     ];
   }
 
-  // The function your "Save" button will call
   void addLog(TimeLog log) {
     state = [...state, log];
   }
 
-  // You will definitely need this when you accidentally typo a time!
   void deleteLog(String id) {
     state = state.where((log) => log.id != id).toList();
   }
 }
 
-// 2. The Main Provider: Your UI will watch this to see the raw list of logs.
+// 2. The Main Provider: Holds everything.
 final logsProvider = NotifierProvider<LogsNotifier, List<TimeLog>>(() {
   return LogsNotifier();
 });
 
-// 3. The "Smart" Provider: This formats the data perfectly for your "Thirds" layout.
-// Your Weekly View UI will just read this map and easily build the cards.
-final weeklyGroupedLogsProvider = Provider<Map<String, Map<String, List<TimeLog>>>>((ref) {
-  // Watch the raw logs. Every time you add a log, this entire map automatically recalculates!
+// 3. The "Current Week" Provider: Filters and sorts the data for your Dashboard.
+final currentWeekProvider = Provider<Map<String, Map<String, List<TimeLog>>>>((ref) {
   final allLogs = ref.watch(logsProvider);
   
-  // Set up the empty template for the week
+  // Find out what the date was for THIS week's Sunday at midnight
+  final now = DateTime.now();
+  final int daysToSubtract = now.weekday % 7;
+  final currentSunday = DateTime(now.year, now.month, now.day).subtract(Duration(days: daysToSubtract));
+
+  // 1. FILTER: Only keep logs that belong to this week
+  final thisWeeksLogs = allLogs.where((log) => log.weekStartDate == currentSunday).toList();
+
+  // 2. REORDER: Set up the template starting from Sunday instead of Monday
   Map<String, Map<String, List<TimeLog>>> grouped = {
+    'Sunday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Monday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Tuesday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Wednesday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Thursday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Friday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
     'Saturday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
-    'Sunday': {'MORNING': [], 'AFTERNOON': [], 'EVENING': []},
   };
 
-  // Drop each log into its exact slot
-  for (final log in allLogs) {
+  // 3. DROP IN DATA
+  for (final log in thisWeeksLogs) {
     final day = log.dayOfWeek;
     final time = log.timeOfDay;
     
-    // Safety check, then place the log in the correct nested list
     if (grouped.containsKey(day) && grouped[day]!.containsKey(time)) {
       grouped[day]![time]!.add(log);
     }
