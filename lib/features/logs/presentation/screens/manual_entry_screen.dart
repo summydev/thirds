@@ -5,7 +5,9 @@ import '../../providers/logs_provider.dart';
 import '../../domain/time_log.dart';
 
 class ManualEntryScreen extends ConsumerStatefulWidget {
-  const ManualEntryScreen({super.key});
+  final TimeLog? logToEdit;
+
+  const ManualEntryScreen({super.key, this.logToEdit});
 
   @override
   ConsumerState<ManualEntryScreen> createState() => _ManualEntryScreenState();
@@ -13,11 +15,20 @@ class ManualEntryScreen extends ConsumerStatefulWidget {
 
 class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
   final _activityController = TextEditingController();
-  
-  // Default to today, but allow changing it for past logs
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.logToEdit != null) {
+      _activityController.text = widget.logToEdit!.activityName;
+      _selectedDate = widget.logToEdit!.startTime;
+      _startTime = TimeOfDay.fromDateTime(widget.logToEdit!.startTime);
+      _endTime = TimeOfDay.fromDateTime(widget.logToEdit!.endTime);
+    }
+  }
 
   @override
   void dispose() {
@@ -25,7 +36,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     super.dispose();
   }
 
-  // --- HELPER: Pick a Date ---
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -38,24 +48,21 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
     }
   }
 
-  // --- HELPER: Pick a Time ---
   Future<void> _pickTime({required bool isStart}) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: isStart 
+          ? (_startTime ?? TimeOfDay.now()) 
+          : (_endTime ?? TimeOfDay.now()),
     );
     if (picked != null) {
       setState(() {
-        if (isStart) {
-          _startTime = picked;
-        } else {
-          _endTime = picked;
-        }
+        if (isStart) _startTime = picked;
+        else _endTime = picked;
       });
     }
   }
 
-  // --- HELPER: Save to Riverpod ---
   void _saveLog() {
     if (_activityController.text.isEmpty || _startTime == null || _endTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +71,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
       return;
     }
 
-    // Merge the chosen date and times into full DateTime objects
     final startDateTime = DateTime(
       _selectedDate.year, _selectedDate.month, _selectedDate.day, 
       _startTime!.hour, _startTime!.minute,
@@ -75,37 +81,60 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
       _endTime!.hour, _endTime!.minute,
     );
 
-    // Create the new log
+    if (endDateTime.isBefore(startDateTime)) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('End time cannot be before start time!')),
+      );
+      return;
+    }
+
     final newLog = TimeLog(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.logToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       activityName: _activityController.text.trim(),
       startTime: startDateTime,
       endTime: endDateTime,
     );
 
-    // Tell Riverpod to add it!
-    ref.read(logsProvider.notifier).addLog(newLog);
+    if (widget.logToEdit != null) {
+      ref.read(logsProvider.notifier).editLog(newLog);
+    } else {
+      ref.read(logsProvider.notifier).addLog(newLog);
+    }
 
-    // Go back to the dashboard
     Navigator.pop(context);
+  }
+
+  void _deleteLog() {
+    if (widget.logToEdit != null) {
+      ref.read(logsProvider.notifier).deleteLog(widget.logToEdit!.id);
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.logToEdit != null;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Add Activity', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(isEditing ? 'Edit Activity' : 'Add Activity', style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          if (isEditing)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: _deleteLog,
+            )
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Activity Name
             TextField(
               controller: _activityController,
               decoration: InputDecoration(
@@ -116,7 +145,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
             ),
             const SizedBox(height: 24),
 
-            // 2. Date Picker (Defaults to today)
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Date', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -126,7 +154,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
             ),
             const Divider(),
 
-            // 3. Start Time Picker
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Start Time', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -136,7 +163,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
             ),
             const Divider(),
 
-            // 4. End Time Picker
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('End Time', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -147,7 +173,6 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
             
             const Spacer(),
 
-            // 5. Save Button
             ElevatedButton(
               onPressed: _saveLog,
               style: ElevatedButton.styleFrom(
@@ -156,7 +181,7 @@ class _ManualEntryScreenState extends ConsumerState<ManualEntryScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Save Log', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text(isEditing ? 'Update Log' : 'Save Log', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 20),
           ],

@@ -13,10 +13,8 @@ class TimeLog {
     required this.endTime,
   });
 
-  // 1. Calculates the exact time spent automatically
   Duration get duration => endTime.difference(startTime);
 
-  // 2. Converts the duration into a clean, readable string
   String get formattedDuration {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
@@ -29,7 +27,6 @@ class TimeLog {
     return '${hours}h ${minutes}m';
   }
 
-  // 3. The "Thirds" Engine: Automatically assigns MORNING, AFTERNOON, or EVENING
   String get timeOfDay {
     final hour = startTime.hour;
     if (hour >= 0 && hour < 12) {
@@ -41,19 +38,12 @@ class TimeLog {
     }
   }
 
-  // 4. Helper to get the name of the day (e.g., "Monday")
   String get dayOfWeek {
     return DateFormat('EEEE').format(startTime); 
   }
 
-  // 5. The Week Identifier (Sunday Start)
-  // Calculates the exact date of the Sunday that started this log's week
   DateTime get weekStartDate {
-    // Dart's weekday: Monday=1 ... Sunday=7
-    // Using modulo 7 turns Sunday into 0, Monday into 1, Tuesday into 2...
     int daysToSubtract = startTime.weekday % 7;
-    
-    // Subtract those days to find the Sunday of that week at midnight
     return DateTime(startTime.year, startTime.month, startTime.day)
         .subtract(Duration(days: daysToSubtract));
   }

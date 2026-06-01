@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/logs_provider.dart';
 import '../../domain/time_log.dart';
-import 'manual_entry_screen.dart'; // Added this import to link the screens
+import 'manual_entry_screen.dart';
+import 'history_screen.dart';
 
-// We use ConsumerWidget instead of StatelessWidget so we can listen to Riverpod
 class WeeklyViewScreen extends ConsumerWidget {
   const WeeklyViewScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 1. Listen to the smartly grouped data map
     final weeklyLogs = ref.watch(currentWeekProvider);
 
     return Scaffold(
@@ -21,8 +20,19 @@ class WeeklyViewScreen extends ConsumerWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.black),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HistoryScreen()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
-      // 2. Build a list of days
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: weeklyLogs.keys.length,
@@ -30,7 +40,6 @@ class WeeklyViewScreen extends ConsumerWidget {
           String day = weeklyLogs.keys.elementAt(index);
           Map<String, List<TimeLog>> timeBlocks = weeklyLogs[day]!;
           
-          // Calculate the total time logged for this specific day
           Duration dailyTotal = Duration.zero;
           for (var block in timeBlocks.values) {
             for (var log in block) {
@@ -38,14 +47,12 @@ class WeeklyViewScreen extends ConsumerWidget {
             }
           }
 
-          return _buildDayCard(day, timeBlocks, dailyTotal);
+          return _buildDayCard(context, day, timeBlocks, dailyTotal);
         },
       ),
-      // 3. The '+' button to add new logs - UPDATED TO NAVIGATE
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.black,
         onPressed: () {
-          // Navigates to the input screen instead of showing a snackbar
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ManualEntryScreen()),
@@ -56,10 +63,7 @@ class WeeklyViewScreen extends ConsumerWidget {
     );
   }
 
-  // --- UI HELPER WIDGETS ---
-
-  Widget _buildDayCard(String day, Map<String, List<TimeLog>> blocks, Duration total) {
-    // Format the daily total for the top right of the card
+  Widget _buildDayCard(BuildContext context, String day, Map<String, List<TimeLog>> blocks, Duration total) {
     final hours = total.inHours;
     final minutes = total.inMinutes.remainder(60);
     final totalText = total == Duration.zero ? '0h 0m' : '${hours}h ${minutes}m';
@@ -77,18 +81,17 @@ class WeeklyViewScreen extends ConsumerWidget {
           totalText, 
           style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.blueGrey, fontSize: 14)
         ),
-        // By default, let's keep Monday expanded if we want, or leave them all collapsed
         children: [
-          _buildTimeBlock('MORNING', blocks['MORNING']!),
-          _buildTimeBlock('AFTERNOON', blocks['AFTERNOON']!),
-          _buildTimeBlock('EVENING', blocks['EVENING']!),
+          _buildTimeBlock(context, 'MORNING', blocks['MORNING']!),
+          _buildTimeBlock(context, 'AFTERNOON', blocks['AFTERNOON']!),
+          _buildTimeBlock(context, 'EVENING', blocks['EVENING']!),
           const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _buildTimeBlock(String blockName, List<TimeLog> logs) {
+  Widget _buildTimeBlock(BuildContext context, String blockName, List<TimeLog> logs) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
       child: Column(
@@ -99,22 +102,36 @@ class WeeklyViewScreen extends ConsumerWidget {
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.2)
           ),
           const SizedBox(height: 6),
-          // If the list is empty, display "null" exactly like your notes
           if (logs.isEmpty)
             const Padding(
               padding: EdgeInsets.only(bottom: 4.0),
               child: Text('null', style: TextStyle(color: Colors.black38, fontStyle: FontStyle.italic)),
             )
           else
-            // If there are logs, map through them and display the rows
-            ...logs.map((log) => Padding(
-              padding: const EdgeInsets.only(bottom: 6.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(log.activityName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                  Text(log.formattedDuration, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-                ],
+            ...logs.map((log) => InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ManualEntryScreen(logToEdit: log),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(log.activityName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                    Row(
+                      children: [
+                        Text(log.formattedDuration, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.edit_note, size: 18, color: Colors.grey),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             )),
         ],

@@ -28,17 +28,13 @@ class HistoryScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               itemCount: historyLogs.keys.length,
               itemBuilder: (context, index) {
-                // Get the starting Sunday for this specific week block
                 DateTime weekStart = historyLogs.keys.elementAt(index);
                 List<TimeLog> logsForThisWeek = historyLogs[weekStart]!;
 
-                // Calculate the end date (Saturday)
                 DateTime weekEnd = weekStart.add(const Duration(days: 6));
                 
-                // Format the string, e.g., "May 24 - May 30, 2026"
                 String dateRange = '${DateFormat('MMM d').format(weekStart)} - ${DateFormat('MMM d, yyyy').format(weekEnd)}';
 
-                // Calculate the total hours logged for this entire week
                 Duration weeklyTotal = Duration.zero;
                 for (var log in logsForThisWeek) {
                   weeklyTotal += log.duration;
