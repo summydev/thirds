@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:thirds/features/logs/presentation/screens/live_timer_screen.dart';
 import '../../providers/logs_provider.dart';
 import '../../domain/time_log.dart';
 import 'manual_entry_screen.dart';
@@ -53,9 +54,35 @@ class WeeklyViewScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.black,
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ManualEntryScreen()),
+          // Show a quick menu at the bottom of the screen
+          showModalBottomSheet(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            builder: (context) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.timer, color: Colors.black),
+                    title: const Text('Start Live Session', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onTap: () {
+                      Navigator.pop(context); // Close the menu
+                      Navigator.push(context, MaterialPageRoute(builder: (context) =>   LiveTimerScreen()));
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.edit_calendar, color: Colors.black),
+                    title: const Text('Log Manually', style: TextStyle(fontWeight: FontWeight.bold)),
+                    onTap: () {
+                      Navigator.pop(context); // Close the menu
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const ManualEntryScreen()));
+                    },
+                  ),
+                ],
+              ),
+            ),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),
