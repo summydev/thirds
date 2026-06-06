@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:thirds/features/logs/presentation/screens/live_timer_screen.dart';
 import '../../providers/logs_provider.dart';
 import '../../domain/time_log.dart';
 import 'manual_entry_screen.dart';
 import 'history_screen.dart';
+import 'live_timer_screen.dart'; // We added this import!
 
 class WeeklyViewScreen extends ConsumerWidget {
   const WeeklyViewScreen({super.key});
@@ -54,7 +54,7 @@ class WeeklyViewScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.black,
         onPressed: () {
-          // Show a quick menu at the bottom of the screen
+          // This is the new Bottom Sheet Menu
           showModalBottomSheet(
             context: context,
             shape: const RoundedRectangleBorder(
@@ -64,22 +64,24 @@ class WeeklyViewScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const SizedBox(height: 8),
                   ListTile(
                     leading: const Icon(Icons.timer, color: Colors.black),
                     title: const Text('Start Live Session', style: TextStyle(fontWeight: FontWeight.bold)),
                     onTap: () {
-                      Navigator.pop(context); // Close the menu
-                      Navigator.push(context, MaterialPageRoute(builder: (context) =>   LiveTimerScreen()));
+                      Navigator.pop(context);
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => const LiveTimerScreen()));
                     },
                   ),
                   ListTile(
                     leading: const Icon(Icons.edit_calendar, color: Colors.black),
                     title: const Text('Log Manually', style: TextStyle(fontWeight: FontWeight.bold)),
                     onTap: () {
-                      Navigator.pop(context); // Close the menu
+                      Navigator.pop(context);
                       Navigator.push(context, MaterialPageRoute(builder: (context) => const ManualEntryScreen()));
                     },
                   ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),

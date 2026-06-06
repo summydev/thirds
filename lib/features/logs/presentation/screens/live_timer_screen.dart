@@ -11,9 +11,8 @@ class LiveTimerScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveTimerScreen> createState() => _LiveTimerScreenState();
 }
 
-// The 'WidgetsBindingObserver' is the secret sauce that knows when you leave the app
 class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsBindingObserver {
-  final _activityController = TextEditingController(text: 'Reading'); // Default to Reading
+  final _activityController = TextEditingController(text: 'Reading'); // Default text
   
   DateTime? _startTime;
   Timer? _ticker;
@@ -23,7 +22,7 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
   @override
   void initState() {
     super.initState();
-    // Start watching the app's lifecycle as soon as this screen opens
+    // Start watching the app's lifecycle
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -42,14 +41,12 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
     super.dispose();
   }
 
-  // THIS is where the magic happens. It fires when the app goes to the background.
+  // Fires when the app is minimized or the user switches apps
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       if (_isRunning) {
         _stopAndSaveLog();
-        // We can't show a snackbar easily while the app is in the background, 
-        // but the data will be safely saved!
       }
     }
   }
@@ -62,7 +59,7 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
       return;
     }
 
-    // Hide keyboard so it looks clean
+    // Hide keyboard
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -71,7 +68,7 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
       _elapsed = Duration.zero;
     });
 
-    // Update the UI every single second
+    // Update the UI every second
     _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _elapsed = DateTime.now().difference(_startTime!);
@@ -85,7 +82,6 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
     _ticker?.cancel();
     final endTime = DateTime.now();
 
-    // Create the log and save it to Riverpod
     final newLog = TimeLog(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       activityName: _activityController.text.trim(),
@@ -99,13 +95,11 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
       _isRunning = false;
     });
 
-    // Close the timer screen and go back to the dashboard
     if (mounted) {
       Navigator.pop(context);
     }
   }
 
-  // Helper to format the stopwatch text (e.g., "01:23:05")
   String get _formattedTime {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = twoDigits(_elapsed.inHours);
@@ -129,10 +123,9 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // The Subject Input
             TextField(
               controller: _activityController,
-              enabled: !_isRunning, // Lock the text field once they start!
+              enabled: !_isRunning,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
               decoration: const InputDecoration(
@@ -142,18 +135,16 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
             ),
             const SizedBox(height: 40),
 
-            // The Giant Timer
             Text(
               _formattedTime,
               style: const TextStyle(
                 fontSize: 72, 
-                fontWeight: FontWeight.w200, // Thin, sleek font
+                fontWeight: FontWeight.w200, 
                 letterSpacing: -2,
               ),
             ),
             const SizedBox(height: 60),
 
-            // The Start / Stop Button
             SizedBox(
               height: 80,
               width: 80,
@@ -172,12 +163,12 @@ class _LiveTimerScreenState extends ConsumerState<LiveTimerScreen> with WidgetsB
             
             const SizedBox(height: 24),
             
-            // Helper text
             Text(
               _isRunning 
-                  ? "Focus. If you leave this screen, the session ends." 
+                  ? "Focus. If you leave this app, the session ends." 
                   : "Tap to start your session.",
               style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
             )
           ],
         ),
